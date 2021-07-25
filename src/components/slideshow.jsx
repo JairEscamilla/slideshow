@@ -1,8 +1,4 @@
-import React, { useRef } from "react";
-import img1 from "../images/1.jpg";
-import img2 from "../images/2.jpg";
-import img3 from "../images/3.jpg";
-import img4 from "../images/4.jpg";
+import React, { useRef, useEffect, useCallback } from "react";
 import { ReactComponent as FlechaIzquierda } from "../images/iconmonstr-angel-left-thin.svg";
 import { ReactComponent as FlechaDerecha } from "../images/iconmonstr-angel-right-thin.svg";
 import styled from "styled-components";
@@ -84,75 +80,88 @@ const Boton = styled.button`
   ${(props) => (props.derecho ? "right: 0" : "left: 0")}
 `;
 
-export const Slideshow = () => {
-  
+const Slideshow = ({ children, controles, autoplay, velocidad, intervalo }) => {
   const slideshow = useRef(null);
+  const interval = useRef(null);
 
-  const siguiente = () => {
+
+  const siguiente = useCallback( () => {
     if (slideshow.current.children.length > 0) {
       const primerElemento = slideshow.current.children[0];
-      slideshow.current.style.transition = `300ms ease-out all`;
+      slideshow.current.style.transition = `${velocidad}ms ease-out all`;
       slideshow.current.style.transform = `translateX(-100%)`;
 
       const transicion = () => {
-        slideshow.current.style.transition = 'none';
-        slideshow.current.style.transform = 'translateX(0)';
+        slideshow.current.style.transition = "none";
+        slideshow.current.style.transform = "translateX(0)";
         slideshow.current.appendChild(primerElemento);
-      }
-      
-      slideshow.current.addEventListener('transitionend', transicion)
+        slideshow.current.removeEventListener("transitionend", transicion);
+      };
+
+      slideshow.current.addEventListener("transitionend", transicion);
+    }
+  }, [velocidad])
+
+  const anterior = () => {
+    const slideShowLength = slideshow.current.children.length;
+    if (slideShowLength > 0) {
+      const ultimoElemento = slideshow.current.children[slideShowLength - 1];
+      slideshow.current.insertBefore(
+        ultimoElemento,
+        slideshow.current.firstChild
+      );
+      slideshow.current.style.transition = "none";
+      slideshow.current.style.transform = "translateX(-100%)";
+      setTimeout(() => {
+        slideshow.current.style.transition = `${velocidad}ms ease-out all`;
+        slideshow.current.style.transform = `translateX(0)`;
+      }, 30);
     }
   };
 
-  const anterior = () => {
-    console.log("Anterior");
-  };
+  useEffect(() => {
+    if(!autoplay)
+      return;
+    interval.current = setInterval(() => {
+      siguiente();
+    }, intervalo);
+
+    slideshow.current.addEventListener("mouseenter", () => {
+      clearInterval(interval.current);
+    });
+
+    slideshow.current.addEventListener("mouseleave", () => {
+      interval.current = setInterval(() => {
+        siguiente();
+      }, intervalo);
+    });
+
+  }, [autoplay, intervalo, siguiente]);
 
   return (
     <ContenedorPrincipal>
       <ContenedorSlideshow ref={slideshow}>
-        <Slide>
-          <a href="https://github.com/JairEscamilla/slideshow">
-            <img src={img1} alt="" />
-          </a>
-          <TextoSlide>
-            <p>15% de descuento en productos de Apple</p>
-          </TextoSlide>
-        </Slide>
-        <Slide>
-          <a href="https://github.com/JairEscamilla/slideshow">
-            <img src={img2} alt="" />
-          </a>
-          <TextoSlide>
-            <p>15% de descuento en productos de Apple</p>
-          </TextoSlide>
-        </Slide>
-        <Slide>
-          <a href="https://github.com/JairEscamilla/slideshow">
-            <img src={img3} alt="" />
-          </a>
-          <TextoSlide>
-            <p>15% de descuento en productos de Apple</p>
-          </TextoSlide>
-        </Slide>
-        <Slide>
-          <a href="https://github.com/JairEscamilla/slideshow">
-            <img src={img4} alt="" />
-          </a>
-          <TextoSlide>
-            <p>15% de descuento en productos de Apple</p>
-          </TextoSlide>
-        </Slide>
+        {children}
       </ContenedorSlideshow>
 
-      <Controles>
-        <Boton onClick={anterior}>
-          <FlechaIzquierda />
-        </Boton>
-        <Boton derecho onClick={siguiente}>
-          <FlechaDerecha />
-        </Boton>
-      </Controles>
+      {
+        controles &&
+          <Controles>
+            <Boton onClick={anterior}>
+              <FlechaIzquierda />
+            </Boton>
+            <Boton derecho onClick={siguiente}>
+              <FlechaDerecha />
+            </Boton>
+          </Controles>
+      }
     </ContenedorPrincipal>
   );
 };
+
+
+export {
+  Slideshow,
+  Slide,
+  TextoSlide
+}
